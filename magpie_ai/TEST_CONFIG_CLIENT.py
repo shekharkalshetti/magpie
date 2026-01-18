@@ -1,5 +1,5 @@
 """
-Examples and tests for Triton SDK configuration and HTTP client.
+Examples and tests for Magpie SDK configuration and HTTP client.
 
 Demonstrates configuration loading, client usage, and fail-open behavior.
 """
@@ -11,9 +11,9 @@ Demonstrates configuration loading, client usage, and fail-open behavior.
 # Example 1: Configuration via environment variables (recommended)
 """
 # Set these in your shell or .env file
-export TRITON_API_KEY="tr_your_api_key_here"
-export TRITON_BACKEND_URL="http://localhost:8000"
-export TRITON_ENABLED="true"  # Optional, defaults to true
+export MAGPIE_API_KEY="tr_your_api_key_here"
+export MAGPIE_BACKEND_URL="http://localhost:8000"
+export MAGPIE_ENABLED="true"  # Optional, defaults to true
 
 # Then in Python:
 import triton
@@ -156,7 +156,7 @@ success = client.send_log_sync(
 
 # Example 1: Missing configuration
 """
-# If TRITON_API_KEY is not set
+# If MAGPIE_API_KEY is not set
 from magpie_ai.client import get_client
 
 client = get_client()
@@ -259,7 +259,7 @@ if config.is_configured():
     client = get_client()
     client.send_log_sync(status="success")
 else:
-    print("Triton SDK not configured, skipping telemetry")
+    print("Magpie SDK not configured, skipping telemetry")
 """
 
 # Pattern 2: Conditional monitoring
@@ -270,8 +270,8 @@ from magpie_ai.config import get_config
 # Only enable in production
 is_production = os.getenv("ENVIRONMENT") == "production"
 
-import triton
-triton.configure(enabled=is_production)
+import magpie_ai
+magpie_ai.configure(enabled=is_production)
 
 # Monitoring only happens in production
 """
@@ -290,7 +290,7 @@ success = client.send_log_sync(
 )
 
 if not success:
-    logger.warning("Failed to send telemetry to Triton")
+    logger.warning("Failed to send telemetry to Magpie")
 """
 
 # =============================================================================
@@ -354,17 +354,17 @@ Return value:
 # =============================================================================
 
 """
-TRITON_API_KEY (required)
-  Your Triton API key
+MAGPIE_API_KEY (required)
+  Your Magpie API key
   Format: tr_xxxxx...
   Get this from: python -m backend.scripts.generate_api_key
 
-TRITON_BACKEND_URL (optional)
+MAGPIE_BACKEND_URL (optional)
   Backend URL
   Default: http://localhost:8000
   Production: https://api.triton.dev (or your deployed URL)
 
-TRITON_ENABLED (optional)
+MAGPIE_ENABLED (optional)
   Whether monitoring is enabled
   Values: "true" or "false"
   Default: true

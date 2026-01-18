@@ -22,17 +22,17 @@ class TritonConfig:
         Initialize Triton SDK configuration.
 
         Args:
-            api_key: Triton API key (defaults to TRITON_API_KEY env var)
-            backend_url: Backend URL (defaults to TRITON_BACKEND_URL or http://localhost:8000)
-            enabled: Whether monitoring is enabled (defaults to TRITON_ENABLED or True)
+            api_key: Triton API key (defaults to MAGPIE_API_KEY env var)
+            backend_url: Backend URL (defaults to MAGPIE_BACKEND_URL or http://localhost:8000)
+            enabled: Whether monitoring is enabled (defaults to MAGPIE_ENABLED or True)
             timeout: Request timeout in seconds
             fail_open: If True, failures won't crash the app
         """
-        self.api_key = api_key or os.getenv("TRITON_API_KEY")
+        self.api_key = api_key or os.getenv("MAGPIE_API_KEY")
         self.backend_url = backend_url or os.getenv(
-            "TRITON_BACKEND_URL", "http://localhost:8000")
+            "MAGPIE_BACKEND_URL", "http://localhost:8000")
         self.enabled = enabled and os.getenv(
-            "TRITON_ENABLED", "true").lower() != "false"
+            "MAGPIE_ENABLED", "true").lower() != "false"
         self.timeout = timeout
         self.fail_open = fail_open
 

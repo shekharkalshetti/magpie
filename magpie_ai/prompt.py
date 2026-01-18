@@ -1,5 +1,5 @@
 """
-Prompt file reader for Triton SDK.
+Prompt file reader for Magpie SDK.
 
 Reads system prompts from shared files written by the backend.
 This enables fast local file reads instead of API calls for on-prem deployments.
@@ -11,9 +11,9 @@ from typing import Optional
 
 
 # Default shared prompts directory (configurable via env)
-# Should match the backend's TRITON_PROMPTS_DIR
+# Should match the backend's MAGPIE_PROMPTS_DIR
 DEFAULT_PROMPTS_DIR = os.getenv(
-    "TRITON_PROMPTS_DIR",
+    "MAGPIE_PROMPTS_DIR",
     str(Path(__file__).parent.parent.parent / "data" / "prompts")
 )
 

@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import threading
 import time
 
-from triton.context import (
+from magpie_ai.context import (
     context,
     get_context_metadata,
     set_context_metadata,

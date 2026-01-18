@@ -4,12 +4,12 @@ from setuptools import setup, find_packages
 setup(
     name="magpie-ai",
     version="0.2.2",
-    author="Triton Team",
-    author_email="team@triton.dev",
+    author="Magpie Team",
+    author_email="team@magpie.dev",
     description="Enterprise-grade LLM middleware for monitoring and metadata tracking",
     long_description="Enterprise-grade LLM middleware SDK for monitoring and metadata tracking",
     long_description_content_type="text/plain",
-    url="https://github.com/triton/sdk",
+    url="https://github.com/magpie-ai/sdk",
     packages=find_packages(),
     package_data={
         "magpie_ai": ["py.typed"],

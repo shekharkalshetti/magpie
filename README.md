@@ -434,9 +434,9 @@ Contributions welcome! Please see our [Contributing Guidelines](CONTRIBUTING.md)
 
 ## Support
 
-- 📧 **Email:** team@triton.dev
-- 📚 **Docs:** https://docs.triton.dev
-- 🐛 **Issues:** https://github.com/triton/magpie-ai/issues
+- 📧 **Email:** team@magpie.dev
+- 📚 **Docs:** https://docs.magpie.dev
+- 🐛 **Issues:** https://github.com/magpie-ai/sdk/issues
 
 ## Changelog
 
@@ -464,4 +464,4 @@ Contributions welcome! Please see our [Contributing Guidelines](CONTRIBUTING.md)
 
 ---
 
-Built with ❤️ by [Triton Team](https://triton.dev)
+Built with ❤️ by [Magpie Team](https://magpie.dev)

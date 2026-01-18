@@ -1,5 +1,5 @@
 """
-Triton SDK - LLM Middleware for monitoring and metadata tracking.
+Magpie SDK - LLM Middleware for monitoring and metadata tracking.
 
 Provides decorator and context manager for capturing LLM execution traces.
 """

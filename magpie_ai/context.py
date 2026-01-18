@@ -6,12 +6,12 @@ or in combination with the @monitor() decorator.
 
 Usage:
     # Standalone - logs the context execution
-    with triton.context(project_id="my-project", metadata={"user_id": "123"}):
+    with magpie_ai.context(project_id="my-project", metadata={"user_id": "123"}):
         result = llm.call(prompt)
     
     # Combined with decorator - metadata is merged
-    with triton.context(metadata={"user_id": "123"}):
-        @triton.monitor(project_id="my-project", metadata={"model": "gpt-4"})
+    with magpie_ai.context(metadata={"user_id": "123"}):
+        @magpie_ai.monitor(project_id="my-project", metadata={"model": "gpt-4"})
         def my_function():
             pass
         my_function()  # Logs with both context and decorator metadata
@@ -118,7 +118,7 @@ def context(
             result = llm.call(prompt)
 
     Example (with decorator):
-        with triton.context(metadata={"user_id": "123"}):
+        with magpie_ai.context(metadata={"user_id": "123"})::
             @triton.monitor(project_id="my-project", metadata={"model": "gpt-4"})
             def my_function():
                 pass

@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Triton Team", email = "team@triton.dev"}
+    {name = "Magpie Team", email = "team@magpie.dev"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -33,9 +33,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/triton"
-Documentation = "https://docs.triton.dev"
-Repository = "https://github.com/triton"
+Homepage = "https://github.com/magpie-ai/sdk"
+Documentation = "https://docs.magpie.dev"
+Repository = "https://github.com/magpie-ai/sdk"
 
 [tool.black]
 line-length = 100

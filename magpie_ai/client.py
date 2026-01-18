@@ -48,7 +48,7 @@ class TritonClient:
         if not self.config.is_configured():
             if not self.config.fail_open:
                 raise RuntimeError(
-                    "Triton SDK not configured. Set TRITON_API_KEY and TRITON_BACKEND_URL.")
+                    "Magpie SDK not configured. Set MAGPIE_API_KEY and MAGPIE_BACKEND_URL.")
             return False
 
         try:
@@ -105,21 +105,21 @@ class TritonClient:
             # HTTP error (4xx, 5xx)
             if self.config.fail_open:
                 print(
-                    f"[Triton] Warning: HTTP error {e.response.status_code}: {e}")
+                    f"[Magpie] Warning: HTTP error {e.response.status_code}: {e}")
                 return False
             else:
                 raise
         except httpx.TimeoutException as e:
             # Request timeout
             if self.config.fail_open:
-                print(f"[Triton] Warning: Request timeout: {e}")
+                print(f"[Magpie] Warning: Request timeout: {e}")
                 return False
             else:
                 raise
         except Exception as e:
             # Any other error (network, etc.)
             if self.config.fail_open:
-                print(f"[Triton] Warning: Failed to send log: {e}")
+                print(f"[Magpie] Warning: Failed to send log: {e}")
                 return False
             else:
                 raise
@@ -137,7 +137,7 @@ class TritonClient:
         if not self.config.is_configured():
             if not self.config.fail_open:
                 raise RuntimeError(
-                    "Triton SDK not configured. Set TRITON_API_KEY and TRITON_BACKEND_URL.")
+                    "Magpie SDK not configured. Set MAGPIE_API_KEY and MAGPIE_BACKEND_URL.")
             return None
 
         try:
@@ -236,12 +236,12 @@ class TritonClient:
 
 
 # Global client instance
-_client: Optional[TritonClient] = None
+_client: Optional[MagpieClient] = None
 
 
-def get_client() -> TritonClient:
+def get_client() -> MagpieClient:
     """Get global client instance."""
     global _client
     if _client is None:
-        _client = TritonClient()
+        _client = MagpieClient()
     return _client

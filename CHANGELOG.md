@@ -13,17 +13,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive README with examples and API documentation
 - Validation for project_id, custom metadata, and pricing configuration
 - Clear error messages for invalid configurations
+- GitHub Actions workflow for automated PyPI publishing
+- Changelog documentation
 
 ### Fixed
 
 - Module import path (triton → magpie_ai)
 - Type hints on decorators now properly show `Callable[[F], F]`
 - Package metadata in setup.py
+- Complete rebranding from Triton to Magpie (all references updated)
+- Environment variables (TRITON_* → MAGPIE_*)
+- Client class renamed (TritonClient → MagpieClient)
 
 ### Changed
 
 - Improved docstrings with Raises section
 - Better error handling for conflicting pricing parameters
+- All documentation examples now use magpie_ai imports
+- Email updated: team@triton.dev → team@magpie.dev
+- URLs updated: triton.dev → magpie.dev
+- Author info updated: Triton Team → Magpie Team
 
 ## [0.2.1] - 2025-01-18
 
