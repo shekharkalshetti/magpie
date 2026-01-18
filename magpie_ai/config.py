@@ -70,10 +70,10 @@ def configure(
     Call this at application startup to set configuration.
 
     Example:
-        import triton
-        triton.configure(
+        import magpie_ai
+        magpie_ai.configure(
             api_key="tr_your_api_key",
-            backend_url="https://api.triton.dev"
+            backend_url="https://api.magpie_ai.dev"
         )
     """
     global _config

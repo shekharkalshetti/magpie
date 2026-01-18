@@ -18,11 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Module import path (triton → magpie_ai)
+- Module import path (magpie_ai → magpie_ai)
 - Type hints on decorators now properly show `Callable[[F], F]`
 - Package metadata in setup.py
 - Complete rebranding from Triton to Magpie (all references updated)
-- Environment variables (TRITON_* → MAGPIE_*)
+- Environment variables (TRITON*\* → MAGPIE*\*)
 - Client class renamed (TritonClient → MagpieClient)
 
 ### Changed
@@ -30,8 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved docstrings with Raises section
 - Better error handling for conflicting pricing parameters
 - All documentation examples now use magpie_ai imports
-- Email updated: team@triton.dev → team@magpie.dev
-- URLs updated: triton.dev → magpie.dev
+- Email updated: team@magpie_ai.dev → team@magpie.dev
+- URLs updated: magpie_ai.dev → magpie.dev
 - Author info updated: Triton Team → Magpie Team
 
 ## [0.2.1] - 2025-01-18
@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Renamed package from triton-sdk to magpie-ai
+- Renamed package from magpie_ai-sdk to magpie-ai
 - Updated all internal module references
 
 ### Added

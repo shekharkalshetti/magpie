@@ -150,7 +150,7 @@ class TestMergeMetadata:
 class TestContextManager:
     """Test the context manager."""
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_basic_context(self, mock_get_client):
         """Test basic context manager usage."""
         mock_client = Mock()
@@ -168,7 +168,7 @@ class TestContextManager:
         assert call_args.kwargs['project_id'] == "test-project"
         assert call_args.kwargs['metadata'] == {"key": "value"}
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_context_stores_metadata(self, mock_get_client):
         """Test that context stores metadata in thread-local storage."""
         mock_client = Mock()
@@ -193,7 +193,7 @@ class TestContextManager:
         ctx_meta = get_context_metadata()
         assert ctx_meta is None
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_context_without_project_id(self, mock_get_client):
         """Test context without project_id (no logging)."""
         mock_client = Mock()
@@ -208,7 +208,7 @@ class TestContextManager:
         # But context execution should not be logged
         assert not mock_client.send_log_sync.called
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_context_log_context_false(self, mock_get_client):
         """Test disabling context execution logging."""
         mock_client = Mock()
@@ -226,7 +226,7 @@ class TestContextManager:
         # But no log should be sent
         assert not mock_client.send_log_sync.called
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_context_with_error(self, mock_get_client):
         """Test context when code raises exception."""
         mock_client = Mock()
@@ -241,7 +241,7 @@ class TestContextManager:
         assert call_args.kwargs['status'] == "error"
         assert call_args.kwargs['error_message'] == "test error"
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_nested_contexts(self, mock_get_client):
         """Test nested context managers."""
         mock_client = Mock()
@@ -274,7 +274,7 @@ class TestContextManager:
         # Outside all contexts
         assert get_context_metadata() is None
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_context_timing(self, mock_get_client):
         """Test that context captures timing."""
         mock_client = Mock()
@@ -288,7 +288,7 @@ class TestContextManager:
         assert duration_ms >= 100
         assert duration_ms < 200
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_context_trace_id(self, mock_get_client):
         """Test custom trace ID."""
         mock_client = Mock()
@@ -304,7 +304,7 @@ class TestContextManager:
         call_args = mock_client.send_log_sync.call_args
         assert call_args.kwargs['trace_id'] == "custom-trace-123"
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_context_auto_trace_id(self, mock_get_client):
         """Test automatic trace ID generation."""
         mock_client = Mock()
@@ -322,7 +322,7 @@ class TestContextManager:
 class TestFailOpenBehavior:
     """Test fail-open behavior."""
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_metadata_sanitization_failure(self, mock_get_client):
         """Test that metadata sanitization failures don't crash."""
         mock_client = Mock()
@@ -338,7 +338,7 @@ class TestFailOpenBehavior:
         # Should still work
         assert mock_client.send_log_sync.called
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_logging_failure_doesnt_crash(self, mock_get_client):
         """Test that logging failures don't crash."""
         mock_client = Mock()
@@ -355,7 +355,7 @@ class TestFailOpenBehavior:
 class TestThreadSafety:
     """Test thread safety of context manager."""
 
-    @patch('triton.context.get_client')
+    @patch('magpie_ai.context.get_client')
     def test_concurrent_contexts(self, mock_get_client):
         """Test multiple concurrent contexts."""
         mock_client = Mock()
@@ -398,10 +398,10 @@ class TestThreadSafety:
 class TestIntegrationWithDecorator:
     """Test integration with @monitor() decorator."""
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_decorator_uses_context_metadata(self, mock_get_client):
         """Test that decorator picks up context metadata."""
-        from triton.monitor import monitor
+        from magpie_ai.monitor import monitor
 
         mock_client = Mock()
         mock_get_client.return_value = mock_client
@@ -421,10 +421,10 @@ class TestIntegrationWithDecorator:
         assert "model" in metadata  # From decorator
         assert "user_id" in metadata  # From context
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_context_metadata_overrides_decorator(self, mock_get_client):
         """Test that context metadata overrides decorator metadata."""
-        from triton.monitor import monitor
+        from magpie_ai.monitor import monitor
 
         mock_client = Mock()
         mock_get_client.return_value = mock_client
@@ -444,10 +444,10 @@ class TestIntegrationWithDecorator:
         assert metadata["temperature"] == 0.9  # Context value
         assert metadata["model"] == "gpt-4"  # Decorator value
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_context_provides_project_id(self, mock_get_client):
         """Test that context can provide project_id to decorator."""
-        from triton.monitor import monitor
+        from magpie_ai.monitor import monitor
 
         mock_client = Mock()
         mock_get_client.return_value = mock_client
@@ -463,10 +463,10 @@ class TestIntegrationWithDecorator:
         call_args = mock_client.send_log_sync.call_args
         assert call_args.kwargs['project_id'] == "decorator-project"
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_context_provides_trace_id(self, mock_get_client):
         """Test that context can provide trace_id to decorator."""
-        from triton.monitor import monitor
+        from magpie_ai.monitor import monitor
 
         mock_client = Mock()
         mock_get_client.return_value = mock_client

@@ -16,7 +16,7 @@ export MAGPIE_BACKEND_URL="http://localhost:8000"
 export MAGPIE_ENABLED="true"  # Optional, defaults to true
 
 # Then in Python:
-import triton
+import magpie_ai
 
 # Config is automatically loaded from environment
 # No explicit configuration needed
@@ -24,9 +24,9 @@ import triton
 
 # Example 2: Programmatic configuration
 """
-import triton
+import magpie_ai
 
-triton.configure(
+magpie_ai.configure(
     api_key="tr_your_api_key_here",
     backend_url="http://localhost:8000",
     enabled=True,
@@ -49,9 +49,9 @@ print(f"Timeout: {config.timeout}s")
 
 # Example 4: Disable monitoring temporarily
 """
-import triton
+import magpie_ai
 
-triton.configure(enabled=False)
+magpie_ai.configure(enabled=False)
 
 # All monitoring calls will be no-ops
 # Useful for testing or development
@@ -59,9 +59,9 @@ triton.configure(enabled=False)
 
 # Example 5: Fail-closed mode (raise exceptions on errors)
 """
-import triton
+import magpie_ai
 
-triton.configure(
+magpie_ai.configure(
     api_key="tr_key",
     backend_url="http://localhost:8000",
     fail_open=False  # Will raise exceptions instead of failing silently
@@ -169,9 +169,9 @@ success = client.send_log_sync(status="success")
 
 # Example 2: Backend is down
 """
-import triton
+import magpie_ai
 
-triton.configure(
+magpie_ai.configure(
     api_key="tr_key",
     backend_url="http://localhost:9999",  # Wrong port
     timeout=2
@@ -189,9 +189,9 @@ success = client.send_log_sync(status="success")
 
 # Example 3: Network timeout
 """
-import triton
+import magpie_ai
 
-triton.configure(
+magpie_ai.configure(
     api_key="tr_key",
     backend_url="http://example.com",  # Slow endpoint
     timeout=0.1  # Very short timeout
@@ -209,9 +209,9 @@ success = client.send_log_sync(status="success")
 
 # Example 4: Invalid API key
 """
-import triton
+import magpie_ai
 
-triton.configure(
+magpie_ai.configure(
     api_key="invalid_key",
     backend_url="http://localhost:8000"
 )
@@ -362,7 +362,7 @@ MAGPIE_API_KEY (required)
 MAGPIE_BACKEND_URL (optional)
   Backend URL
   Default: http://localhost:8000
-  Production: https://api.triton.dev (or your deployed URL)
+  Production: https://api.magpie_ai.dev (or your deployed URL)
 
 MAGPIE_ENABLED (optional)
   Whether monitoring is enabled

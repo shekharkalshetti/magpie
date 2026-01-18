@@ -111,7 +111,7 @@ def context(
         log_context: Whether to log the context execution itself (default: True)
 
     Example (standalone):
-        with triton.context(
+        with magpie_ai.context(
             project_id="my-project",
             metadata={"user_id": "123", "session": "abc"}
         ):
@@ -119,7 +119,7 @@ def context(
 
     Example (with decorator):
         with magpie_ai.context(metadata={"user_id": "123"})::
-            @triton.monitor(project_id="my-project", metadata={"model": "gpt-4"})
+            @magpie_ai.monitor(project_id="my-project", metadata={"model": "gpt-4"})
             def my_function():
                 pass
 

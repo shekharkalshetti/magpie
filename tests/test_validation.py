@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 
-from triton.validation import (
+from magpie_ai.validation import (
     ValidationResult,
     MetadataSchemaCache,
     validate_metadata,
@@ -215,7 +215,7 @@ class TestEnumValidation:
 class TestMetadataValidation:
     """Test metadata validation function."""
 
-    @patch('triton.validation._schema_cache')
+    @patch('magpie_ai.validation._schema_cache')
     def test_validation_with_valid_metadata(self, mock_cache):
         """Test validation with valid metadata."""
         schema = {
@@ -232,7 +232,7 @@ class TestMetadataValidation:
         assert result.missing_keys == []
         assert result.invalid_types == {}
 
-    @patch('triton.validation._schema_cache')
+    @patch('magpie_ai.validation._schema_cache')
     def test_validation_with_missing_required_keys(self, mock_cache):
         """Test validation with missing required keys."""
         schema = {
@@ -248,7 +248,7 @@ class TestMetadataValidation:
         assert result.is_valid is False
         assert "user_id" in result.missing_keys
 
-    @patch('triton.validation._schema_cache')
+    @patch('magpie_ai.validation._schema_cache')
     def test_validation_with_invalid_types(self, mock_cache):
         """Test validation with invalid types."""
         schema = {
@@ -265,7 +265,7 @@ class TestMetadataValidation:
         assert "model" in result.invalid_types
         assert "temperature" in result.invalid_types
 
-    @patch('triton.validation._schema_cache')
+    @patch('magpie_ai.validation._schema_cache')
     def test_validation_with_invalid_enum_values(self, mock_cache):
         """Test validation with invalid enum values."""
         schema = {
@@ -284,7 +284,7 @@ class TestMetadataValidation:
         assert result.is_valid is False
         assert "environment" in result.invalid_enum_values
 
-    @patch('triton.validation._schema_cache')
+    @patch('magpie_ai.validation._schema_cache')
     def test_validation_with_unrecognized_keys(self, mock_cache):
         """Test validation with unrecognized keys."""
         schema = {
@@ -299,7 +299,7 @@ class TestMetadataValidation:
         assert result.is_valid is True  # Unrecognized keys don't invalidate
         assert "unknown_field" in result.unrecognized_keys
 
-    @patch('triton.validation._schema_cache')
+    @patch('magpie_ai.validation._schema_cache')
     def test_validation_without_schema(self, mock_cache):
         """Test validation when schema is unavailable."""
         mock_cache.get_schema.return_value = None
@@ -311,7 +311,7 @@ class TestMetadataValidation:
         # Should return valid when schema unavailable (fail-open)
         assert result.is_valid is True
 
-    @patch('triton.validation._schema_cache')
+    @patch('magpie_ai.validation._schema_cache')
     def test_validation_exception_handling(self, mock_cache):
         """Test validation handles exceptions gracefully."""
         mock_cache.get_schema.side_effect = Exception("Network error")
@@ -373,7 +373,7 @@ class TestGlobalFunctions:
 
     def test_clear_schema_cache(self):
         """Test clearing global schema cache."""
-        from triton.validation import _schema_cache
+        from magpie_ai.validation import _schema_cache
 
         # Add some data to cache
         _schema_cache._cache["project-1"] = {"model": "schema"}

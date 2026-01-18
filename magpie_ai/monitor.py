@@ -2,7 +2,7 @@
 Decorator for monitoring function execution.
 
 Usage:
-    @triton.monitor(project_id="my-project", pii=True, content_moderation=True)
+    @magpie_ai.monitor(project_id="my-project", pii=True, content_moderation=True)
     def my_llm_function(prompt):
         return llm.call(prompt)
 """
@@ -82,7 +82,7 @@ def _get_executor() -> ThreadPoolExecutor:
     global _executor
     if _executor is None:
         _executor = ThreadPoolExecutor(
-            max_workers=4, thread_name_prefix="triton_")
+            max_workers=4, thread_name_prefix="magpie_ai_")
     return _executor
 
 

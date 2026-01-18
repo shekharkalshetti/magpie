@@ -9,7 +9,7 @@ from datetime import datetime
 import time
 import threading
 
-from triton.monitor import (
+from magpie_ai.monitor import (
     monitor,
     _execute_monitored,
     _capture_input,
@@ -21,7 +21,7 @@ from triton.monitor import (
 class TestMonitorDecorator:
     """Test the @monitor() decorator."""
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_basic_decoration(self, mock_get_client):
         """Test basic function decoration and execution."""
         mock_client = Mock()
@@ -36,7 +36,7 @@ class TestMonitorDecorator:
         assert result == 5
         assert mock_client.send_log_sync.called
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_decorator_with_metadata(self, mock_get_client):
         """Test decorator with static metadata."""
         mock_client = Mock()
@@ -59,7 +59,7 @@ class TestMonitorDecorator:
             "model": "gpt-4", "temperature": 0.7}
         assert call_args.kwargs['project_id'] == "test-project"
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_decorator_preserves_function_metadata(self, mock_get_client):
         """Test that decorator preserves function name and docstring."""
         mock_client = Mock()
@@ -73,7 +73,7 @@ class TestMonitorDecorator:
         assert documented_function.__name__ == "documented_function"
         assert documented_function.__doc__ == """This is a docstring."""
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_decorator_with_kwargs(self, mock_get_client):
         """Test decorator with keyword arguments."""
         mock_client = Mock()
@@ -98,7 +98,7 @@ class TestMonitorDecorator:
 class TestExecutionMonitoring:
     """Test execution monitoring behavior."""
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_successful_execution_logging(self, mock_get_client):
         """Test logging of successful execution."""
         mock_client = Mock()
@@ -118,7 +118,7 @@ class TestExecutionMonitoring:
         assert call_args.kwargs['error_message'] is None
         assert call_args.kwargs['function_name'] == "successful_function"
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_error_execution_logging(self, mock_get_client):
         """Test logging when function raises exception."""
         mock_client = Mock()
@@ -136,7 +136,7 @@ class TestExecutionMonitoring:
         assert call_args.kwargs['status'] == "error"
         assert call_args.kwargs['error_message'] == "Something went wrong"
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_timing_capture(self, mock_get_client):
         """Test that timing is captured correctly."""
         mock_client = Mock()
@@ -159,7 +159,7 @@ class TestExecutionMonitoring:
         assert isinstance(call_args.kwargs['started_at'], datetime)
         assert isinstance(call_args.kwargs['completed_at'], datetime)
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_trace_id_generation(self, mock_get_client):
         """Test automatic trace ID generation."""
         mock_client = Mock()
@@ -178,7 +178,7 @@ class TestExecutionMonitoring:
         assert isinstance(trace_id, str)
         assert len(trace_id) > 0
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_custom_trace_id(self, mock_get_client):
         """Test using custom trace ID."""
         mock_client = Mock()
@@ -316,7 +316,7 @@ class TestOutputCapture:
 class TestFailOpenBehavior:
     """Test fail-open behavior."""
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_monitoring_failure_doesnt_crash(self, mock_get_client):
         """Test that monitoring failures don't crash the function."""
         # Make send_log_sync raise an exception
@@ -332,7 +332,7 @@ class TestFailOpenBehavior:
         result = important_function()
         assert result == "important result"
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_metadata_sanitization_failure_doesnt_crash(self, mock_get_client):
         """Test that metadata sanitization failures don't crash."""
         mock_client = Mock()
@@ -350,8 +350,8 @@ class TestFailOpenBehavior:
         result = test_function()
         assert result == "result"
 
-    @patch('triton.monitor.get_client')
-    @patch('triton.monitor._capture_input', side_effect=Exception("Capture failed"))
+    @patch('magpie_ai.monitor.get_client')
+    @patch('magpie_ai.monitor._capture_input', side_effect=Exception("Capture failed"))
     def test_input_capture_failure_doesnt_crash(self, mock_capture, mock_get_client):
         """Test that input capture failures don't crash."""
         mock_client = Mock()
@@ -368,8 +368,8 @@ class TestFailOpenBehavior:
         call_args = mock_client.send_log_sync.call_args
         assert call_args.kwargs['input'] is None
 
-    @patch('triton.monitor.get_client')
-    @patch('triton.monitor._capture_output', side_effect=Exception("Capture failed"))
+    @patch('magpie_ai.monitor.get_client')
+    @patch('magpie_ai.monitor._capture_output', side_effect=Exception("Capture failed"))
     def test_output_capture_failure_doesnt_crash(self, mock_capture, mock_get_client):
         """Test that output capture failures don't crash."""
         mock_client = Mock()
@@ -390,7 +390,7 @@ class TestFailOpenBehavior:
 class TestThreadSafety:
     """Test thread-safety of the decorator."""
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_concurrent_executions(self, mock_get_client):
         """Test multiple concurrent executions."""
         mock_client = Mock()
@@ -429,7 +429,7 @@ class TestThreadSafety:
 class TestCaptureFlags:
     """Test capture_input and capture_output flags."""
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_capture_input_disabled(self, mock_get_client):
         """Test disabling input capture."""
         mock_client = Mock()
@@ -444,7 +444,7 @@ class TestCaptureFlags:
         call_args = mock_client.send_log_sync.call_args
         assert call_args.kwargs['input'] is None
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_capture_output_disabled(self, mock_get_client):
         """Test disabling output capture."""
         mock_client = Mock()
@@ -459,7 +459,7 @@ class TestCaptureFlags:
         call_args = mock_client.send_log_sync.call_args
         assert call_args.kwargs['output'] is None
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_both_captures_disabled(self, mock_get_client):
         """Test disabling both input and output capture."""
         mock_client = Mock()
@@ -486,8 +486,8 @@ class TestCaptureFlags:
 class TestAsyncLogging:
     """Test asynchronous logging behavior."""
 
-    @patch('triton.monitor.threading.Thread')
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.threading.Thread')
+    @patch('magpie_ai.monitor.get_client')
     def test_logging_uses_background_thread(self, mock_get_client, mock_thread_class):
         """Test that logging happens in background thread."""
         mock_client = Mock()
@@ -509,7 +509,7 @@ class TestAsyncLogging:
         call_kwargs = mock_thread_class.call_args.kwargs
         assert call_kwargs.get('daemon') is True
 
-    @patch('triton.monitor.get_client')
+    @patch('magpie_ai.monitor.get_client')
     def test_main_function_doesnt_wait_for_logging(self, mock_get_client):
         """Test that main function doesn't wait for logging to complete."""
         mock_client = Mock()
