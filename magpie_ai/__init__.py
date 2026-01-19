@@ -4,7 +4,7 @@ Magpie SDK - LLM Middleware for monitoring and metadata tracking.
 Provides decorator and context manager for capturing LLM execution traces.
 """
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 
 from magpie_ai.monitor import monitor
 from magpie_ai.context import context
