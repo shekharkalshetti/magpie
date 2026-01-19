@@ -51,7 +51,7 @@ class PIIDetector:
         self.llm_url = llm_url
         self.model = model
         self.api_endpoint = f"{llm_url}/v1/chat/completions"
-        self._cache = {}  # Cache for analyzed texts
+        self._cache: dict[str, PIIResult] = {}  # Cache for analyzed texts
 
     def _create_detection_prompt(self, text: str) -> str:
         """Create prompt for PII detection."""
@@ -92,7 +92,7 @@ Now process the text above and return ONLY the JSON:"""
             # Call LM Studio API
             prompt = self._create_detection_prompt(text)
 
-            response = httpx.post(
+            response_http = httpx.post(
                 self.api_endpoint,
                 json={
                     "model": self.model,
@@ -104,12 +104,13 @@ Now process the text above and return ONLY the JSON:"""
                 timeout=30,
             )
 
-            response.raise_for_status()
-            api_result = response.json()
+            response_http.raise_for_status()
+            api_result = response_http.json()
 
             # Parse response from LM Studio format
             response_text = (
-                api_result.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+                api_result.get("choices", [{}])[0].get(
+                    "message", {}).get("content", "{}")
             )
 
             # Clean up response text - remove markdown code blocks if present
@@ -126,20 +127,21 @@ Now process the text above and return ONLY the JSON:"""
                 detection_result = json.loads(response_text)
             except json.JSONDecodeError as e:
                 # Fail open - no PII detected if parsing fails
-                result = PIIResult(
+                error_result = PIIResult(
                     contains_pii=False,
                     redacted_text=None,
                     pii_types=[],
                     error=f"Failed to parse response: {str(e)}",
                 )
-                self._cache[cache_key] = result
-                return result
+                self._cache[cache_key] = error_result
+                return error_result
 
             contains_pii = detection_result.get("contains_pii", False)
             pii_types = detection_result.get("pii_types", [])
-            redacted_text = detection_result.get("redacted_text") if contains_pii else None
+            redacted_text = detection_result.get(
+                "redacted_text") if contains_pii else None
 
-            result = PIIResult(
+            result: PIIResult = PIIResult(
                 contains_pii=contains_pii, redacted_text=redacted_text, pii_types=pii_types
             )
 

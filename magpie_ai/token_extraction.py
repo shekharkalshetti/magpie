@@ -34,7 +34,8 @@ def extract_tokens_from_response(
     if isinstance(response, str):
         output_tokens = estimate_tokens_from_text(response)
         # If we have input text, estimate input tokens too
-        input_tokens = estimate_tokens_from_text(input_text) if input_text else None
+        input_tokens = estimate_tokens_from_text(
+            input_text) if input_text else None
         return input_tokens, output_tokens
 
     # Try to extract from common attributes
@@ -46,7 +47,8 @@ def extract_tokens_from_response(
     output_text = extract_text_from_response(response)
     if output_text:
         output_tokens = estimate_tokens_from_text(output_text)
-        input_tokens = estimate_tokens_from_text(input_text) if input_text else None
+        input_tokens = estimate_tokens_from_text(
+            input_text) if input_text else None
         return input_tokens, output_tokens
 
     return None, None
@@ -127,10 +129,14 @@ def extract_text_from_response(response: Any) -> Optional[str]:
         choice = response.choices[0]
         # Try message.content (ChatCompletion)
         if hasattr(choice, "message") and hasattr(choice.message, "content"):
-            return choice.message.content
+            result = choice.message.content
+            if isinstance(result, str):
+                return result
         # Try text (Completion)
         if hasattr(choice, "text"):
-            return choice.text
+            result = choice.text
+            if isinstance(result, str):
+                return result
 
     # Anthropic
     if hasattr(response, "content"):
@@ -139,9 +145,13 @@ def extract_text_from_response(response: Any) -> Optional[str]:
             # Try first block
             first = content[0]
             if hasattr(first, "text"):
-                return first.text
+                result = first.text
+                if isinstance(result, str):
+                    return result
             if isinstance(first, dict) and "text" in first:
-                return first["text"]
+                result = first["text"]
+                if isinstance(result, str):
+                    return result
 
     # Dictionary format
     if isinstance(response, dict):
@@ -149,16 +159,22 @@ def extract_text_from_response(response: Any) -> Optional[str]:
         if "choices" in response and len(response["choices"]) > 0:
             choice = response["choices"][0]
             if "message" in choice and "content" in choice["message"]:
-                return choice["message"]["content"]
+                result = choice["message"]["content"]
+                if isinstance(result, str):
+                    return result
             if "text" in choice:
-                return choice["text"]
+                result = choice["text"]
+                if isinstance(result, str):
+                    return result
 
         # Anthropic style
         if "content" in response and isinstance(response["content"], list):
             if len(response["content"]) > 0:
                 first = response["content"][0]
                 if isinstance(first, dict) and "text" in first:
-                    return first["text"]
+                    result = first["text"]
+                    if isinstance(result, str):
+                        return result
 
     return None
 
@@ -178,11 +194,15 @@ def extract_model_from_response(response: Any) -> Optional[str]:
 
     # Check for direct model attribute
     if hasattr(response, "model"):
-        return response.model
+        result = response.model
+        if isinstance(result, str):
+            return result
 
     # Dictionary format
     if isinstance(response, dict) and "model" in response:
-        return response["model"]
+        result = response["model"]
+        if isinstance(result, str):
+            return result
 
     return None
 

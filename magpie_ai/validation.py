@@ -22,14 +22,20 @@ class ValidationResult:
         unrecognized_keys: Optional[List[str]] = None,
     ):
         self.is_valid = is_valid
-        self.missing_keys = missing_keys or []
-        self.invalid_types = invalid_types or {}
-        self.invalid_enum_values = invalid_enum_values or {}
-        self.unrecognized_keys = unrecognized_keys or []
+        self.missing_keys: List[str] = missing_keys if missing_keys is not None else [
+        ]
+        self.invalid_types: Dict[str,
+                                 str] = invalid_types if invalid_types is not None else {}
+        self.invalid_enum_values: Dict[str, str] = (
+            invalid_enum_values if invalid_enum_values is not None else {}
+        )
+        self.unrecognized_keys: List[str] = (
+            unrecognized_keys if unrecognized_keys is not None else []
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for logging."""
-        result = {"is_valid": self.is_valid}
+        result: Dict[str, Any] = {"is_valid": self.is_valid}
         if self.missing_keys:
             result["missing_keys"] = self.missing_keys
         if self.invalid_types:
@@ -300,10 +306,10 @@ def sanitize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
     for key, value in metadata.items():
         # Keep primitives as-is
         if isinstance(value, (str, int, float, bool, type(None))):
-            sanitized[key] = value
+            sanitized[key] = value  # type: ignore[assignment]
         # Keep lists and dicts (assume they're serializable)
         elif isinstance(value, (list, dict)):
-            sanitized[key] = value
+            sanitized[key] = value  # type: ignore[assignment]
         # Convert everything else to string
         else:
             sanitized[key] = str(value)
