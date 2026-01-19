@@ -6,7 +6,7 @@ to detect policy violations in content.
 """
 
 import json
-import requests
+import httpx
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 from enum import Enum
@@ -151,7 +151,7 @@ Return ONLY the JSON:"""
             # Call LM Studio API
             user_prompt = self._create_moderation_prompt(content)
 
-            response = requests.post(
+            response = httpx.post(
                 self.api_endpoint,
                 json={
                     "model": self.model,
@@ -248,7 +248,7 @@ Return ONLY the JSON:"""
 
         except ContentModerationError:
             raise
-        except requests.exceptions.RequestException as e:
+        except httpx.RequestError as e:
             # Fail open - if LM Studio unavailable, allow content
             return ModerationResult(
                 is_safe=True,

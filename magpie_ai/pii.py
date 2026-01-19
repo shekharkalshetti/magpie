@@ -5,7 +5,7 @@ Uses local LLM to detect and redact PII (Personally Identifiable Information).
 When enabled, automatically redacts PII from inputs before LLM execution.
 """
 import json
-import requests
+import httpx
 from typing import Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 
@@ -92,7 +92,7 @@ Now process the text above and return ONLY the JSON:"""
             # Call LM Studio API
             prompt = self._create_detection_prompt(text)
 
-            response = requests.post(
+            response = httpx.post(
                 self.api_endpoint,
                 json={
                     "model": self.model,
@@ -157,7 +157,7 @@ Now process the text above and return ONLY the JSON:"""
 
             return result
 
-        except requests.exceptions.RequestException as e:
+        except httpx.RequestError as e:
             # Fail open - if LM Studio is not available, don't block execution
             return PIIResult(
                 contains_pii=False,
