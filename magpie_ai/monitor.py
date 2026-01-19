@@ -26,7 +26,7 @@ from magpie_ai.content_moderation import (
     get_moderator
 )
 from magpie_ai.pricing import calculate_costs, get_context_utilization
-from magpie_ai.token_extraction import extract_tokens_from_response, extract_text_from_response
+from magpie_ai.token_extraction import extract_tokens_from_response, extract_text_from_response, estimate_tokens_from_text
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -457,6 +457,15 @@ def _execute_monitored(
         completed_at = datetime.utcnow()
         total_latency_ms = int(
             (completed_at - started_at).total_seconds() * 1000)
+
+        # For blocked inputs, set costs to zero since LLM was never called
+        # (moderation LLM is self-hosted, so no cost to client)
+        if input_was_blocked:
+            input_tokens = 0
+            output_tokens = 0
+            input_cost = 0.0
+            output_cost = 0.0
+            context_utilization = 0.0
 
         # For blocked inputs, send log synchronously to get log_id for async task
         # For other cases, send asynchronously as before
