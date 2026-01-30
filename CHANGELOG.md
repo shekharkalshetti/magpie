@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.2.7] - 2025-01-30
 
+### Fixed
+
+- Fixed input capture for class methods with conversation history
+- SDK now extracts only the last user message instead of entire history
+- Improved handling of multi-turn conversations with message lists
+- Properly skips `self` parameter in class methods during input capture
 ## [0.2.7] - 2025-01-30
 
 ### Fixed
