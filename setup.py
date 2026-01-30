@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="magpie-ai",
-    version="0.2.7",
+    version="0.2.8",
     author="Magpie Team",
     author_email="team@magpie.dev",
     description="Enterprise-grade LLM middleware for monitoring and metadata tracking",

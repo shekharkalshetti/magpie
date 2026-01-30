@@ -49,7 +49,7 @@ def read_system_prompt(project_id: str) -> Optional[str]:
     try:
         if file_path.exists():
             return file_path.read_text(encoding="utf-8")
-    except (IOError, OSError) as e:
+    except (IOError, OSError):
         # Fail silently - caller should handle None
         pass
     return None

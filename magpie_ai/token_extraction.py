@@ -4,8 +4,7 @@ Token extraction utilities for various LLM providers.
 Handles response inspection for OpenAI, Anthropic, and other formats.
 """
 
-from typing import Optional, Dict, Any, Tuple
-import json
+from typing import Optional, Any, Tuple
 
 
 def extract_tokens_from_response(

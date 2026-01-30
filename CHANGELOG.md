@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.8] - 2026-01-31
+
+### Fixed
+
+- Fixed content moderation input extraction for chat APIs with `messages` parameter
+- SDK now properly extracts user message content from conversation lists for moderation
+- Fixed input text extraction to skip `self` parameter in class methods
+- Improved bare except statements for better error handling (linting compliance)
+
 ## [0.2.7] - 2025-01-30
 
 ### Fixed

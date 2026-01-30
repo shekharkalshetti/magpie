@@ -5,7 +5,6 @@ Handles async POST requests to log execution data.
 """
 
 import httpx
-import asyncio
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -219,19 +218,19 @@ class MagpieClient:
                 except Exception:
                     return None
 
-        except httpx.HTTPStatusError as e:
+        except httpx.HTTPStatusError:
             # HTTP error (4xx, 5xx)
             if self.config.fail_open:
                 return None
             else:
                 raise
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             # Request timeout
             if self.config.fail_open:
                 return None
             else:
                 raise
-        except Exception as e:
+        except Exception:
             # Any other error - fail silently during shutdown
             if self.config.fail_open:
                 return None

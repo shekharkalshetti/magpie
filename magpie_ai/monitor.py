@@ -10,20 +10,18 @@ Usage:
 import functools
 import threading
 import atexit
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, Any, Optional, TypeVar, cast
 from datetime import datetime
 import uuid
 import inspect
-import json
 
 from magpie_ai.client import get_client
 from magpie_ai.context import get_context_metadata
-from magpie_ai.pii import PIIDetector, PIIResult, get_detector
+from magpie_ai.pii import PIIDetector, get_detector
 from magpie_ai.content_moderation import (
     ContentModerator,
     ContentModerationError,
-    ModerationResult,
     ModerationAction,
     get_moderator,
 )
@@ -31,7 +29,6 @@ from magpie_ai.pricing import calculate_costs, get_context_utilization
 from magpie_ai.token_extraction import (
     extract_tokens_from_response,
     extract_text_from_response,
-    estimate_tokens_from_text,
 )
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -53,14 +50,16 @@ def _validate_monitor_params(
 ) -> None:
     """Validate monitor decorator parameters."""
     if not project_id or not isinstance(project_id, str):
-        raise ValueError("project_id is required and must be a non-empty string")
+        raise ValueError(
+            "project_id is required and must be a non-empty string")
 
     if custom is not None and not isinstance(custom, dict):
         raise TypeError("custom parameter must be a dictionary")
 
     # Pricing validation: either use model name or explicit prices, not both
     has_model = model is not None
-    has_explicit_pricing = (input_token_price is not None) or (output_token_price is not None)
+    has_explicit_pricing = (input_token_price is not None) or (
+        output_token_price is not None)
 
     if has_model and has_explicit_pricing:
         raise ValueError(
@@ -85,7 +84,8 @@ def _get_executor() -> ThreadPoolExecutor:
     """Get or create the shared thread pool executor."""
     global _executor
     if _executor is None:
-        _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="magpie_ai_")
+        _executor = ThreadPoolExecutor(
+            max_workers=4, thread_name_prefix="magpie_ai_")
     return _executor
 
 
@@ -99,13 +99,13 @@ def _wait_for_logging_threads():
         for thread in threads_to_wait:
             try:
                 thread.join(timeout=2.0)  # Wait max 2 seconds per thread
-            except:
+            except Exception:
                 pass  # Ignore errors during shutdown
 
         # Shutdown executor
         if _executor:
             _executor.shutdown(wait=True, cancel_futures=False)
-    except:
+    except Exception:
         pass  # Ignore all errors during interpreter shutdown
 
 
@@ -363,7 +363,8 @@ def _execute_monitored(
 
                     mod_result = ModerationResult(
                         is_safe=moderation_info.get("is_safe", False),
-                        action=ModerationAction(moderation_info.get("action", "block")),
+                        action=ModerationAction(
+                            moderation_info.get("action", "block")),
                         violations=[],  # Already included in moderation_info
                         raw_response=None,
                         error=moderation_info.get("error"),
@@ -459,7 +460,8 @@ def _execute_monitored(
     finally:
         # Always send log, even if function failed
         completed_at = datetime.utcnow()
-        total_latency_ms = int((completed_at - started_at).total_seconds() * 1000)
+        total_latency_ms = int(
+            (completed_at - started_at).total_seconds() * 1000)
 
         # For blocked inputs, set costs to zero since LLM was never called
         # (moderation LLM is self-hosted, so no cost to client)
@@ -498,7 +500,7 @@ def _execute_monitored(
                     moderation_info=moderation_info,
                 )
                 # log_id is returned directly as string from send_log_sync
-            except Exception as e:
+            except Exception:
                 # Fail open - continue even if log send fails
                 pass
         else:
@@ -562,8 +564,24 @@ def _extract_input_text(args: tuple, kwargs: dict) -> str:
     """Extract text content from function arguments for analysis."""
     texts = []
 
-    # Check positional args
-    for arg in args:
+    # Check for 'messages' parameter (common in chat/LLM APIs)
+    # Extract the last user message from conversation history
+    messages = kwargs.get("messages") or (
+        args[1] if len(args) > 1 and isinstance(args[1], list) else None
+    )
+    if messages and isinstance(messages, list):
+        for msg in reversed(messages):
+            if isinstance(msg, dict) and msg.get("role") == "user":
+                content = msg.get("content", "")
+                if isinstance(content, str) and content:
+                    texts.append(content)
+                    break
+
+    # Check positional args (skip self/cls if present)
+    for i, arg in enumerate(args):
+        # Skip first arg if it looks like self/cls
+        if i == 0 and not isinstance(arg, (str, dict, list)):
+            continue
         if isinstance(arg, str):
             texts.append(arg)
         elif isinstance(arg, dict):
@@ -594,11 +612,14 @@ def _process_parallel(
     executor = _get_executor()
 
     pii_detector = get_detector(llm_url=llm_url, model=llm_model)
-    moderator = get_moderator(project_id=project_id, llm_url=llm_url, model=llm_model)
+    moderator = get_moderator(project_id=project_id,
+                              llm_url=llm_url, model=llm_model)
 
     # Submit both tasks
-    pii_future = executor.submit(_run_pii_detection, pii_detector, args, kwargs)
-    moderation_future = executor.submit(_run_content_moderation, moderator, input_text)
+    pii_future = executor.submit(
+        _run_pii_detection, pii_detector, args, kwargs)
+    moderation_future = executor.submit(
+        _run_content_moderation, moderator, input_text)
 
     # Wait for both to complete
     processed_args, processed_kwargs, pii_info = pii_future.result(timeout=60)
@@ -658,7 +679,8 @@ def _process_moderation_only(
     input_text: str, project_id: str, llm_url: str, llm_model: str
 ) -> Optional[Dict]:
     """Process only content moderation (synchronous)."""
-    moderator = get_moderator(project_id=project_id, llm_url=llm_url, model=llm_model)
+    moderator = get_moderator(project_id=project_id,
+                              llm_url=llm_url, model=llm_model)
     return _run_content_moderation(moderator, input_text)
 
 
@@ -778,7 +800,7 @@ def _send_log_async(
                 with _threads_lock:
                     if thread in _active_threads:
                         _active_threads.remove(thread)
-            except:
+            except Exception:
                 pass
 
     # Start background thread (non-daemon so logs complete before exit)
