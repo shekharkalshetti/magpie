@@ -25,6 +25,10 @@ from magpie_ai.content_moderation import (
     ModerationAction,
     get_moderator,
 )
+from magpie_ai.schema_guard import (
+    SchemaValidationError,
+    validate_output_schema,
+)
 from magpie_ai.pricing import calculate_costs, get_context_utilization
 from magpie_ai.token_extraction import (
     extract_tokens_from_response,
@@ -47,19 +51,50 @@ def _validate_monitor_params(
     model: Optional[str],
     input_token_price: Optional[float],
     output_token_price: Optional[float],
+    capture_input: bool = True,
+    trace_id: Optional[str] = None,
+    pii: bool = False,
+    content_moderation: bool = False,
+    llm_url: str = "http://localhost:1234",
+    llm_model: str = "qwen2.5-1.5b-instruct",
+    output_schema: Any = None,
+    on_schema_fail: str = "block",
 ) -> None:
     """Validate monitor decorator parameters."""
+    # Required parameters
     if not project_id or not isinstance(project_id, str):
-        raise ValueError(
-            "project_id is required and must be a non-empty string")
+        raise ValueError("project_id is required and must be a non-empty string")
+
+    # Type checks for boolean parameters
+    if not isinstance(capture_input, bool):
+        raise TypeError("capture_input must be a boolean")
+
+    if not isinstance(pii, bool):
+        raise TypeError("pii must be a boolean")
+
+    if not isinstance(content_moderation, bool):
+        raise TypeError("content_moderation must be a boolean")
+
+    # Optional string parameters
+    if trace_id is not None and not isinstance(trace_id, str):
+        raise TypeError("trace_id must be a string")
+
+    if trace_id is not None and not trace_id.strip():
+        raise ValueError("trace_id must be a non-empty string if provided")
 
     if custom is not None and not isinstance(custom, dict):
         raise TypeError("custom parameter must be a dictionary")
 
+    # Model name validation
+    if model is not None:
+        if not isinstance(model, str):
+            raise TypeError("model must be a string")
+        if not model.strip():
+            raise ValueError("model must be a non-empty string if provided")
+
     # Pricing validation: either use model name or explicit prices, not both
     has_model = model is not None
-    has_explicit_pricing = (input_token_price is not None) or (
-        output_token_price is not None)
+    has_explicit_pricing = (input_token_price is not None) or (output_token_price is not None)
 
     if has_model and has_explicit_pricing:
         raise ValueError(
@@ -79,13 +114,41 @@ def _validate_monitor_params(
     if output_token_price is not None and output_token_price < 0:
         raise ValueError("output_token_price must be non-negative")
 
+    # LLM URL/model validation (required when pii or content_moderation enabled)
+    if not isinstance(llm_url, str) or not llm_url.strip():
+        raise ValueError("llm_url must be a non-empty string")
+
+    if not isinstance(llm_model, str) or not llm_model.strip():
+        raise ValueError("llm_model must be a non-empty string")
+
+    # Schema Guard validation
+    if on_schema_fail not in ("block", "flag"):
+        raise ValueError("on_schema_fail must be 'block' or 'flag'")
+
+    if output_schema is not None:
+        # Check it's a Pydantic BaseModel class or a dict (JSON Schema)
+        is_pydantic = False
+        try:
+            from pydantic import BaseModel
+
+            is_pydantic = isinstance(output_schema, type) and issubclass(output_schema, BaseModel)
+        except ImportError:
+            pass
+
+        if not is_pydantic and not isinstance(output_schema, dict):
+            raise TypeError(
+                "output_schema must be a Pydantic BaseModel class or a JSON Schema dict"
+            )
+
+    if on_schema_fail != "block" and output_schema is None:
+        raise ValueError("on_schema_fail='flag' requires output_schema to be set")
+
 
 def _get_executor() -> ThreadPoolExecutor:
     """Get or create the shared thread pool executor."""
     global _executor
     if _executor is None:
-        _executor = ThreadPoolExecutor(
-            max_workers=4, thread_name_prefix="magpie_ai_")
+        _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="magpie_ai_")
     return _executor
 
 
@@ -125,13 +188,15 @@ def monitor(
     model: Optional[str] = None,
     input_token_price: Optional[float] = None,
     output_token_price: Optional[float] = None,
+    output_schema: Any = None,
+    on_schema_fail: str = "block",
 ) -> Callable[[F], F]:
     """
     Decorator for monitoring function execution.
 
     Captures input, output, timing, and comprehensive metrics for decorated functions.
     Automatically extracts tokens, calculates costs, and sends logs to backend asynchronously.
-    Optionally performs PII detection/redaction and content moderation.
+    Optionally performs PII detection/redaction, content moderation, and output schema validation.
 
     Args:
         project_id: Project ID (required)
@@ -145,10 +210,14 @@ def monitor(
         model: Model name for pricing lookup (e.g., "gpt-4", "claude-3-sonnet")
         input_token_price: Explicit input token price per 1M tokens (use if model not in database)
         output_token_price: Explicit output token price per 1M tokens (use if model not in database)
+        output_schema: Pydantic BaseModel class or JSON Schema dict for output validation (default: None)
+        on_schema_fail: Action on schema validation failure - "block" raises SchemaValidationError,
+            "flag" allows output through but flags for review (default: "block")
 
     Raises:
         ValueError: If project_id is empty, pricing config is invalid, or both model and explicit pricing are provided
-        TypeError: If custom is not a dict or pricing values are not numeric
+        TypeError: If custom is not a dict, pricing values are not numeric, or output_schema is invalid
+        SchemaValidationError: If output_schema is set, on_schema_fail="block", and output doesn't match schema
 
     Captured Metrics:
         - Request tracing: trace_id, project_id
@@ -161,37 +230,35 @@ def monitor(
     Features:
         - pii=True: Detects and redacts PII from inputs before LLM execution
         - content_moderation=True: Checks content against policy rules, blocks violations
-        - Both enabled: Runs in parallel for time efficiency
+        - output_schema=MyModel: Validates LLM output against schema (Schema Guard)
+        - Both PII and moderation enabled: Runs in parallel for time efficiency
         - Automatic token extraction from OpenAI and Anthropic responses
         - Automatic cost calculation based on pricing
 
-    Pricing Configuration:
-        Option 1 - Use model name (recommended):
-            @magpie_ai.monitor(..., model="gpt-4")
+    Schema Guard Example:
+        from pydantic import BaseModel
 
-        Option 2 - Explicit pricing:
-            @magpie_ai.monitor(..., input_token_price=0.03, output_token_price=0.06)
+        class MovieReview(BaseModel):
+            title: str
+            rating: float
+            summary: str
 
-        Cannot mix both options.
-
-    Example:
         @magpie_ai.monitor(
             project_id="my-project",
             model="gpt-4",
-            pii=True,
-            content_moderation=True,
-            custom={"user_id": "user_123", "session": "abc"}
+            output_schema=MovieReview,
+            on_schema_fail="block"
         )
-        def chat_with_gpt(prompt: str) -> str:
+        def analyze_movie(messages: list):
             client = OpenAI()
             return client.chat.completions.create(
                 model="gpt-4",
-                messages=[{"role": "user", "content": prompt}]
-            ).choices[0].message.content
+                messages=messages
+            )
 
     Note:
         - Currently supports synchronous functions only
-        - Fails open - never crashes your application
+        - Fails open - never crashes your application (except SchemaValidationError in block mode)
         - Thread-safe - can be used in multi-threaded environments
     """
     # Validate all parameters upfront
@@ -201,6 +268,14 @@ def monitor(
         model=model,
         input_token_price=input_token_price,
         output_token_price=output_token_price,
+        capture_input=capture_input,
+        trace_id=trace_id,
+        pii=pii,
+        content_moderation=content_moderation,
+        llm_url=llm_url,
+        llm_model=llm_model,
+        output_schema=output_schema,
+        on_schema_fail=on_schema_fail,
     )
 
     def decorator(func: F) -> F:
@@ -221,6 +296,8 @@ def monitor(
                 model=model,
                 input_token_price=input_token_price,
                 output_token_price=output_token_price,
+                output_schema=output_schema,
+                on_schema_fail=on_schema_fail,
             )
 
         return cast(F, wrapper)
@@ -243,6 +320,8 @@ def _execute_monitored(
     model: Optional[str],
     input_token_price: Optional[float],
     output_token_price: Optional[float],
+    output_schema: Any = None,
+    on_schema_fail: str = "block",
 ):
     """
     Execute function with monitoring.
@@ -302,9 +381,11 @@ def _execute_monitored(
     status = "success"
     error_message: Optional[str] = None
 
-    # Initialize moderation and pii info before processing block
+    # Initialize moderation, pii, and schema validation info before processing block
     moderation_info = None
     pii_info = None
+    schema_validation_info: Optional[Dict[str, Any]] = None
+    schema_block_error: Optional[SchemaValidationError] = None
 
     # Extract text from inputs for processing
     input_text: str = _extract_input_text(args, kwargs)
@@ -363,8 +444,7 @@ def _execute_monitored(
 
                     mod_result = ModerationResult(
                         is_safe=moderation_info.get("is_safe", False),
-                        action=ModerationAction(
-                            moderation_info.get("action", "block")),
+                        action=ModerationAction(moderation_info.get("action", "block")),
                         violations=[],  # Already included in moderation_info
                         raw_response=None,
                         error=moderation_info.get("error"),
@@ -449,6 +529,37 @@ def _execute_monitored(
             # Fail open - if pricing/token extraction fails, continue without costs
             pass
 
+        # ============================================================
+        # SCHEMA GUARD: Validate output against schema
+        # ============================================================
+        if output_schema is not None and output_text:
+            try:
+                validation_result = validate_output_schema(output_text, output_schema)
+                schema_validation_info = validation_result.to_dict()
+                schema_validation_info["on_fail"] = on_schema_fail
+
+                if not validation_result.valid:
+                    if on_schema_fail == "block":
+                        # Block mode: raise error after logging
+                        status = "error"
+                        error_msg = (
+                            f"Schema Guard: Output does not match {validation_result.schema_name}. "
+                            f"Errors: {'; '.join(validation_result.errors)}"
+                        )
+                        error_message = error_msg
+                        schema_block_error = SchemaValidationError(
+                            message=error_msg,
+                            output_text=output_text,
+                            schema_name=validation_result.schema_name,
+                            validation_errors=validation_result.errors,
+                        )
+                    # Flag mode: continue normally, validation info will be sent with log
+            except SchemaValidationError:
+                raise  # Re-raise schema errors (shouldn't happen here, but just in case)
+            except Exception:
+                # Fail open - if schema validation itself crashes, continue
+                pass
+
         return result
 
     except Exception as e:
@@ -460,8 +571,7 @@ def _execute_monitored(
     finally:
         # Always send log, even if function failed
         completed_at = datetime.utcnow()
-        total_latency_ms = int(
-            (completed_at - started_at).total_seconds() * 1000)
+        total_latency_ms = int((completed_at - started_at).total_seconds() * 1000)
 
         # For blocked inputs, set costs to zero since LLM was never called
         # (moderation LLM is self-hosted, so no cost to client)
@@ -476,14 +586,14 @@ def _execute_monitored(
         # For other cases, send asynchronously as before
         log_id = None
 
-        if input_was_blocked:
-            # Synchronous send for blocked input to get log_id
+        if input_was_blocked or schema_block_error:
+            # Synchronous send for blocked input/schema to get log_id
             try:
                 log_id = client.send_log_sync(
                     project_id=effective_project_id,
                     trace_id=execution_trace_id,
                     input=captured_input_text,
-                    output=None,
+                    output=output_text if schema_block_error else None,
                     custom=custom,
                     started_at=started_at,
                     completed_at=completed_at,
@@ -498,6 +608,7 @@ def _execute_monitored(
                     output_cost=output_cost,
                     pii_info=pii_info,
                     moderation_info=moderation_info,
+                    schema_validation=schema_validation_info,
                 )
                 # log_id is returned directly as string from send_log_sync
             except Exception:
@@ -526,6 +637,7 @@ def _execute_monitored(
                     output_cost=output_cost,
                     pii_info=pii_info,
                     moderation_info=moderation_info,
+                    schema_validation=schema_validation_info,
                 )
             except Exception:
                 # Fail open - never crash user's code due to monitoring
@@ -558,6 +670,10 @@ def _execute_monitored(
         # Re-raise the input block error now that logging is complete
         if input_block_error:
             raise input_block_error
+
+        # Re-raise schema validation error now that logging is complete
+        if schema_block_error:
+            raise schema_block_error
 
 
 def _extract_input_text(args: tuple, kwargs: dict) -> str:
@@ -612,14 +728,11 @@ def _process_parallel(
     executor = _get_executor()
 
     pii_detector = get_detector(llm_url=llm_url, model=llm_model)
-    moderator = get_moderator(project_id=project_id,
-                              llm_url=llm_url, model=llm_model)
+    moderator = get_moderator(project_id=project_id, llm_url=llm_url, model=llm_model)
 
     # Submit both tasks
-    pii_future = executor.submit(
-        _run_pii_detection, pii_detector, args, kwargs)
-    moderation_future = executor.submit(
-        _run_content_moderation, moderator, input_text)
+    pii_future = executor.submit(_run_pii_detection, pii_detector, args, kwargs)
+    moderation_future = executor.submit(_run_content_moderation, moderator, input_text)
 
     # Wait for both to complete
     processed_args, processed_kwargs, pii_info = pii_future.result(timeout=60)
@@ -679,8 +792,7 @@ def _process_moderation_only(
     input_text: str, project_id: str, llm_url: str, llm_model: str
 ) -> Optional[Dict]:
     """Process only content moderation (synchronous)."""
-    moderator = get_moderator(project_id=project_id,
-                              llm_url=llm_url, model=llm_model)
+    moderator = get_moderator(project_id=project_id, llm_url=llm_url, model=llm_model)
     return _run_content_moderation(moderator, input_text)
 
 
@@ -761,6 +873,7 @@ def _send_log_async(
     output_cost: float,
     pii_info: Optional[Dict[str, Any]],
     moderation_info: Optional[Dict[str, Any]],
+    schema_validation: Optional[Dict[str, Any]] = None,
 ):
     """
     Send log to backend asynchronously in a background thread.
@@ -790,6 +903,7 @@ def _send_log_async(
                 output_cost=output_cost,
                 pii_info=pii_info,
                 moderation_info=moderation_info,
+                schema_validation=schema_validation,
             )
         except Exception:
             # Fail open - silently ignore all errors

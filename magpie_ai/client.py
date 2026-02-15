@@ -162,6 +162,7 @@ class MagpieClient:
             output_cost = kwargs.get("output_cost", 0.0)
             pii_info = kwargs.get("pii_info")
             moderation_info = kwargs.get("moderation_info")
+            schema_validation = kwargs.get("schema_validation")
 
             # Calculate total_tokens if we have both
             total_tokens = None
@@ -193,6 +194,7 @@ class MagpieClient:
                 "total_cost": total_cost,
                 "pii_detection": pii_info,
                 "content_moderation": moderation_info,
+                "schema_validation": schema_validation,
             }
 
             # Remove None values
