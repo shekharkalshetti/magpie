@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-15
+
+### Added
+
+- **Schema Guard**: Output format validation for LLM responses
+  - `output_schema` parameter on `@monitor` decorator — accepts Pydantic models or JSON Schema dicts
+  - `on_schema_fail="block"` mode — raises `SchemaValidationError` when output doesn't match schema
+  - `on_schema_fail="flag"` mode — allows output through, flags violation for human review
+  - `SchemaValidationError` exception with `output_text`, `schema_name`, `validation_errors` properties
+  - Automatic JSON extraction from LLM output (handles markdown fences, surrounding text)
+  - Schema validation info included in execution logs (`schema_validation` field)
+- Comprehensive parameter validation for `@monitor` decorator
+  - Type checks for `capture_input`, `pii`, `content_moderation` (must be bool)
+  - String validation for `trace_id`, `model`
+  - Non-empty string validation for `llm_url`, `llm_model`
+  - Warning when `on_schema_fail` is set without `output_schema`
+
 ## [0.2.8] - 2026-01-31
 
 ### Fixed

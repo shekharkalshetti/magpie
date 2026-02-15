@@ -10,6 +10,7 @@ from magpie_ai.monitor import monitor
 from magpie_ai.context import context
 from magpie_ai.validation import validate_metadata, clear_schema_cache, ValidationResult
 from magpie_ai.content_moderation import ContentModerationError
+from magpie_ai.schema_guard import SchemaValidationError
 
 __all__ = [
     "monitor",
@@ -18,4 +19,5 @@ __all__ = [
     "clear_schema_cache",
     "ValidationResult",
     "ContentModerationError",
+    "SchemaValidationError",
 ]
