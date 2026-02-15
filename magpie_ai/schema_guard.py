@@ -139,7 +139,7 @@ def _get_schema_name(schema: Any) -> str:
     if isinstance(schema, type):
         return schema.__name__
     elif isinstance(schema, dict):
-        return schema.get("title", "JSONSchema")
+        return str(schema.get("title", "JSONSchema"))
     return str(type(schema).__name__)
 
 
