@@ -61,9 +61,7 @@ def _extract_json_from_text(text: str) -> str:
     text = text.strip()
 
     # Try markdown code fences: ```json ... ``` or ``` ... ```
-    fence_match = re.search(
-        r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL
-    )
+    fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL)
     if fence_match:
         return fence_match.group(1).strip()
 
@@ -89,9 +87,7 @@ def _extract_json_from_text(text: str) -> str:
     return text
 
 
-def validate_output_schema(
-    output_text: str, schema: Any
-) -> SchemaValidationResult:
+def validate_output_schema(output_text: str, schema: Any) -> SchemaValidationResult:
     """
     Validate LLM output against a schema.
 
@@ -161,10 +157,7 @@ def _validate_pydantic(json_text: str, schema: Type) -> SchemaValidationResult:
             schema_name=schema_name,
         )
     except ValidationError as e:
-        errors = [
-            f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}"
-            for err in e.errors()
-        ]
+        errors = [f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}" for err in e.errors()]
         return SchemaValidationResult(
             valid=False,
             errors=errors,
@@ -178,9 +171,7 @@ def _validate_pydantic(json_text: str, schema: Type) -> SchemaValidationResult:
         )
 
 
-def _validate_json_schema(
-    json_text: str, schema: dict
-) -> SchemaValidationResult:
+def _validate_json_schema(json_text: str, schema: dict) -> SchemaValidationResult:
     """Validate against a JSON Schema dict."""
     schema_name = schema.get("title", "JSONSchema")
 

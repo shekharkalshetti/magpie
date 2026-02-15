@@ -63,8 +63,7 @@ def _validate_monitor_params(
     """Validate monitor decorator parameters."""
     # Required parameters
     if not project_id or not isinstance(project_id, str):
-        raise ValueError(
-            "project_id is required and must be a non-empty string")
+        raise ValueError("project_id is required and must be a non-empty string")
 
     # Type checks for boolean parameters
     if not isinstance(capture_input, bool):
@@ -95,8 +94,7 @@ def _validate_monitor_params(
 
     # Pricing validation: either use model name or explicit prices, not both
     has_model = model is not None
-    has_explicit_pricing = (input_token_price is not None) or (
-        output_token_price is not None)
+    has_explicit_pricing = (input_token_price is not None) or (output_token_price is not None)
 
     if has_model and has_explicit_pricing:
         raise ValueError(
@@ -125,15 +123,14 @@ def _validate_monitor_params(
 
     # Schema Guard validation
     if on_schema_fail not in ("block", "flag"):
-        raise ValueError(
-            "on_schema_fail must be 'block' or 'flag'"
-        )
+        raise ValueError("on_schema_fail must be 'block' or 'flag'")
 
     if output_schema is not None:
         # Check it's a Pydantic BaseModel class or a dict (JSON Schema)
         is_pydantic = False
         try:
             from pydantic import BaseModel
+
             is_pydantic = isinstance(output_schema, type) and issubclass(output_schema, BaseModel)
         except ImportError:
             pass
@@ -144,17 +141,14 @@ def _validate_monitor_params(
             )
 
     if on_schema_fail != "block" and output_schema is None:
-        raise ValueError(
-            "on_schema_fail='flag' requires output_schema to be set"
-        )
+        raise ValueError("on_schema_fail='flag' requires output_schema to be set")
 
 
 def _get_executor() -> ThreadPoolExecutor:
     """Get or create the shared thread pool executor."""
     global _executor
     if _executor is None:
-        _executor = ThreadPoolExecutor(
-            max_workers=4, thread_name_prefix="magpie_ai_")
+        _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="magpie_ai_")
     return _executor
 
 
@@ -450,8 +444,7 @@ def _execute_monitored(
 
                     mod_result = ModerationResult(
                         is_safe=moderation_info.get("is_safe", False),
-                        action=ModerationAction(
-                            moderation_info.get("action", "block")),
+                        action=ModerationAction(moderation_info.get("action", "block")),
                         violations=[],  # Already included in moderation_info
                         raw_response=None,
                         error=moderation_info.get("error"),
@@ -578,8 +571,7 @@ def _execute_monitored(
     finally:
         # Always send log, even if function failed
         completed_at = datetime.utcnow()
-        total_latency_ms = int(
-            (completed_at - started_at).total_seconds() * 1000)
+        total_latency_ms = int((completed_at - started_at).total_seconds() * 1000)
 
         # For blocked inputs, set costs to zero since LLM was never called
         # (moderation LLM is self-hosted, so no cost to client)
@@ -736,14 +728,11 @@ def _process_parallel(
     executor = _get_executor()
 
     pii_detector = get_detector(llm_url=llm_url, model=llm_model)
-    moderator = get_moderator(project_id=project_id,
-                              llm_url=llm_url, model=llm_model)
+    moderator = get_moderator(project_id=project_id, llm_url=llm_url, model=llm_model)
 
     # Submit both tasks
-    pii_future = executor.submit(
-        _run_pii_detection, pii_detector, args, kwargs)
-    moderation_future = executor.submit(
-        _run_content_moderation, moderator, input_text)
+    pii_future = executor.submit(_run_pii_detection, pii_detector, args, kwargs)
+    moderation_future = executor.submit(_run_content_moderation, moderator, input_text)
 
     # Wait for both to complete
     processed_args, processed_kwargs, pii_info = pii_future.result(timeout=60)
@@ -803,8 +792,7 @@ def _process_moderation_only(
     input_text: str, project_id: str, llm_url: str, llm_model: str
 ) -> Optional[Dict]:
     """Process only content moderation (synchronous)."""
-    moderator = get_moderator(project_id=project_id,
-                              llm_url=llm_url, model=llm_model)
+    moderator = get_moderator(project_id=project_id, llm_url=llm_url, model=llm_model)
     return _run_content_moderation(moderator, input_text)
 
 
