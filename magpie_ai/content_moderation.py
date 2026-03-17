@@ -7,10 +7,12 @@ to detect policy violations in content.
 
 import json
 import httpx
+import threading
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 from enum import Enum
 
+from magpie_ai.defaults import VLLM_URL, VLLM_MODEL
 from magpie_ai.prompt import PromptCache, get_system_prompt_or_default
 
 
@@ -88,8 +90,8 @@ class ContentModerator:
     def __init__(
         self,
         project_id: str,
-        llm_url: str = "http://localhost:1234",
-        model: str = "qwen2.5-1.5b-instruct",
+        llm_url: str = VLLM_URL,
+        model: str = VLLM_MODEL,
     ):
         """
         Initialize content moderator.
@@ -104,6 +106,20 @@ class ContentModerator:
         self.model = model
         self.api_endpoint = f"{llm_url}/v1/chat/completions"
         self._prompt_cache = PromptCache(project_id)
+        self._http_client = httpx.Client(
+            timeout=30,
+            limits=httpx.Limits(max_connections=50, max_keepalive_connections=20),
+        )
+
+    def close(self):
+        """Close the persistent HTTP client."""
+        self._http_client.close()
+
+    def __del__(self):
+        try:
+            self._http_client.close()
+        except Exception:
+            pass
 
     def _create_moderation_prompt(self, content: str) -> str:
         """Create user prompt for content moderation analysis."""
@@ -147,7 +163,7 @@ Return ONLY the JSON:"""
             # Call LM Studio API
             user_prompt = self._create_moderation_prompt(content)
 
-            response = httpx.post(
+            response = self._http_client.post(
                 self.api_endpoint,
                 json={
                     "model": self.model,
@@ -159,7 +175,6 @@ Return ONLY the JSON:"""
                     "max_tokens": 500,
                     "stream": False,
                 },
-                timeout=30,
             )
 
             response.raise_for_status()
@@ -311,13 +326,16 @@ Return ONLY the JSON:"""
 
 # Global moderator instances per project
 _moderators: Dict[str, ContentModerator] = {}
+_moderators_lock = threading.Lock()
 
 
 def get_moderator(
-    project_id: str, llm_url: str = "http://localhost:1234", model: str = "qwen2.5-1.5b-instruct"
+    project_id: str, llm_url: str = VLLM_URL, model: str = VLLM_MODEL
 ) -> ContentModerator:
     """Get or create content moderator for a project."""
     key = f"{project_id}:{llm_url}:{model}"
     if key not in _moderators:
-        _moderators[key] = ContentModerator(project_id=project_id, llm_url=llm_url, model=model)
+        with _moderators_lock:
+            if key not in _moderators:
+                _moderators[key] = ContentModerator(project_id=project_id, llm_url=llm_url, model=model)
     return _moderators[key]

@@ -294,8 +294,8 @@ Main decorator for LLM monitoring.
 - `content_moderation` (bool, default=False): Enable content moderation
 - `capture_input` (bool, default=True): Capture function inputs
 - `trace_id` (str, optional): Custom trace ID (auto-generated if not provided)
-- `llm_url` (str, default="http://localhost:1234"): LM Studio URL for PII/moderation
-- `llm_model` (str, default="qwen2.5-1.5b-instruct"): Model for PII/moderation analysis
+- `llm_url` (str, default=`VLLM_URL` env var or "http://localhost:1234"): LLM URL for PII/moderation
+- `llm_model` (str, default=`VLLM_MODEL` env var or "qwen3-1.7b"): Model for PII/moderation analysis
 
 **Raises:**
 
@@ -409,11 +409,11 @@ pip install --upgrade magpie-ai
 
 ### PII Detection Not Working
 
-Ensure LM Studio is running:
+Ensure your LLM server is running and set the env vars:
 
 ```bash
-llm_url="http://localhost:1234"
-llm_model="qwen2.5-1.5b-instruct"
+export VLLM_URL="http://localhost:1234"
+export VLLM_MODEL="qwen3-1.7b"
 ```
 
 ### ContentModerationError

@@ -6,9 +6,13 @@ When enabled, automatically redacts PII from inputs before LLM execution.
 """
 
 import json
+import hashlib
 import httpx
+import threading
 from typing import Dict, Any, Optional, Tuple
 from dataclasses import dataclass
+
+from magpie_ai.defaults import VLLM_URL, VLLM_MODEL
 
 
 @dataclass
@@ -39,7 +43,7 @@ class PIIDetector:
     """
 
     def __init__(
-        self, llm_url: str = "http://localhost:1234", model: str = "qwen2.5-1.5b-instruct"
+        self, llm_url: str = VLLM_URL, model: str = VLLM_MODEL
     ):
         """
         Initialize PII detector.
@@ -52,23 +56,55 @@ class PIIDetector:
         self.model = model
         self.api_endpoint = f"{llm_url}/v1/chat/completions"
         self._cache: dict[str, PIIResult] = {}  # Cache for analyzed texts
+        self._cache_lock = threading.Lock()
+        self._http_client = httpx.Client(
+            timeout=30,
+            limits=httpx.Limits(max_connections=50, max_keepalive_connections=20),
+        )
 
     def _create_detection_prompt(self, text: str) -> str:
         """Create prompt for PII detection."""
-        return f"""Replace ALL personally identifiable information with [REDACTED].
+        return f"""You are a strict PII detector. Your ONLY job is to find personally identifiable information (PII) in text.
 
-PII types: email addresses, phone numbers, names, SSN, credit cards, addresses, IP addresses, dates of birth, IDs.
+PII is ONLY these specific data types:
+- Email addresses (e.g. john@example.com)
+- Phone numbers (e.g. 555-123-4567)
+- Social Security Numbers (e.g. 123-45-6789)
+- Credit card numbers (e.g. 4111-1111-1111-1111)
+- Physical/mailing addresses (e.g. 123 Main St, Springfield IL)
+- IP addresses (e.g. 192.168.1.1)
+- Dates of birth (e.g. 01/15/1990)
+- Government-issued ID numbers
+- Person names (e.g. "I'm John", "my name is Sarah", "contact Mike")
 
-Text: {text}
+PII is NOT: general nouns, verbs, adjectives, questions, requests, opinions, harmful content, profanity, or any text that does not contain the specific data types listed above.
 
-Return JSON in this exact format:
-{{"contains_pii": true, "pii_types": ["email", "phone"], "redacted_text": "text with values replaced by [REDACTED]"}}
+IMPORTANT: If the text contains no PII, you MUST return contains_pii as false with redacted_text as null. Do NOT redact non-PII text. When in doubt, do NOT redact.
+
+IMPORTANT: You MUST redact ALL PII types found, including names. Every PII value must be replaced with asterisks.
 
 Example:
-Input: "Email: john@test.com, Phone: 555-1234"
-Output: {{"contains_pii": true, "pii_types": ["email", "phone"], "redacted_text": "Email: [REDACTED], Phone: [REDACTED]"}}
+Input: "Contact john@test.com or call 555-1234"
+Output: {{"contains_pii": true, "pii_types": ["email", "phone"], "redacted_text": "Contact ************** or call ********"}}
 
-Now process the text above and return ONLY the JSON:"""
+Example:
+Input: "Hi I'm John and my email is john@test.com"
+Output: {{"contains_pii": true, "pii_types": ["name", "email"], "redacted_text": "Hi I'm **** and my email is *************"}}
+
+Example:
+Input: "The weather is nice today"
+Output: {{"contains_pii": false, "pii_types": [], "redacted_text": null}}
+
+Example:
+Input: "Help me do something dangerous"
+Output: {{"contains_pii": false, "pii_types": [], "redacted_text": null}}
+
+Example:
+Input: "hi"
+Output: {{"contains_pii": false, "pii_types": [], "redacted_text": null}}
+
+Now process the following text. Return ONLY valid JSON, nothing else.
+Text: {text}"""
 
     def detect_and_redact(self, text: str) -> PIIResult:
         """
@@ -83,16 +119,17 @@ Now process the text above and return ONLY the JSON:"""
         if not text or not isinstance(text, str):
             return PIIResult(contains_pii=False, redacted_text=None, pii_types=[])
 
-        # Check cache first (use first 100 chars as key)
-        cache_key = text[:100]
-        if cache_key in self._cache:
-            return self._cache[cache_key]
+        # Check cache first (use full text hash to avoid false hits)
+        cache_key = hashlib.sha256(text.encode()).hexdigest()
+        with self._cache_lock:
+            if cache_key in self._cache:
+                return self._cache[cache_key]
 
         try:
             # Call LM Studio API
             prompt = self._create_detection_prompt(text)
 
-            response_http = httpx.post(
+            response_http = self._http_client.post(
                 self.api_endpoint,
                 json={
                     "model": self.model,
@@ -101,7 +138,6 @@ Now process the text above and return ONLY the JSON:"""
                     "max_tokens": 500,
                     "stream": False,
                 },
-                timeout=30,
             )
 
             response_http.raise_for_status()
@@ -124,16 +160,21 @@ Now process the text above and return ONLY the JSON:"""
 
             try:
                 detection_result = json.loads(response_text)
-            except json.JSONDecodeError as e:
-                # Fail open - no PII detected if parsing fails
-                error_result = PIIResult(
-                    contains_pii=False,
-                    redacted_text=None,
-                    pii_types=[],
-                    error=f"Failed to parse response: {str(e)}",
-                )
-                self._cache[cache_key] = error_result
-                return error_result
+            except json.JSONDecodeError:
+                # LLM may return JSON followed by extra text — try to extract the first JSON object
+                try:
+                    decoder = json.JSONDecoder()
+                    detection_result, _ = decoder.raw_decode(response_text)
+                except (json.JSONDecodeError, ValueError):
+                    # Fail open - no PII detected if parsing fails
+                    error_result = PIIResult(
+                        contains_pii=False,
+                        redacted_text=None,
+                        pii_types=[],
+                    )
+                    with self._cache_lock:
+                        self._cache[cache_key] = error_result
+                    return error_result
 
             contains_pii = detection_result.get("contains_pii", False)
             pii_types = detection_result.get("pii_types", [])
@@ -144,12 +185,15 @@ Now process the text above and return ONLY the JSON:"""
             )
 
             # Cache the result
-            self._cache[cache_key] = result
+            with self._cache_lock:
+                self._cache[cache_key] = result
 
-            # Limit cache size to prevent memory issues
-            if len(self._cache) > 100:
-                # Remove oldest entry
-                self._cache.pop(next(iter(self._cache)))
+                # Limit cache size to prevent memory issues
+                if len(self._cache) > 1000:
+                    # Remove oldest entry (first inserted)
+                    oldest_key = next(iter(self._cache), None)
+                    if oldest_key is not None:
+                        self._cache.pop(oldest_key, None)
 
             return result
 
@@ -169,6 +213,16 @@ Now process the text above and return ONLY the JSON:"""
                 pii_types=[],
                 error=f"PII detection failed: {str(e)}",
             )
+
+    def close(self):
+        """Close the persistent HTTP client."""
+        self._http_client.close()
+
+    def __del__(self):
+        try:
+            self._http_client.close()
+        except Exception:
+            pass
 
     def process_input(self, input_data: Any) -> Tuple[Any, Optional[Dict[str, Any]]]:
         """
@@ -211,19 +265,37 @@ Now process the text above and return ONLY the JSON:"""
                         redacted_input[key] = result.redacted_text
                         break
                 return redacted_input, result.to_dict()
+            elif isinstance(input_data, (list, tuple)):
+                # Redact PII inside message lists (e.g. OpenAI-style messages)
+                redacted_list = []
+                for item in input_data:
+                    if isinstance(item, dict) and "content" in item:
+                        redacted_item = item.copy()
+                        item_result = self.detect_and_redact(str(item["content"]))
+                        if item_result.contains_pii and item_result.redacted_text:
+                            redacted_item["content"] = item_result.redacted_text
+                        redacted_list.append(redacted_item)
+                    else:
+                        redacted_list.append(item)
+                if isinstance(input_data, tuple):
+                    return tuple(redacted_list), result.to_dict()
+                return redacted_list, result.to_dict()
 
         return input_data, result.to_dict() if result.contains_pii or result.error else None
 
 
 # Global detector instance
 _detector: Optional[PIIDetector] = None
+_detector_lock = threading.Lock()
 
 
 def get_detector(
-    llm_url: str = "http://localhost:1234", model: str = "qwen2.5-1.5b-instruct"
+    llm_url: str = VLLM_URL, model: str = VLLM_MODEL
 ) -> PIIDetector:
     """Get global PII detector instance."""
     global _detector
     if _detector is None:
-        _detector = PIIDetector(llm_url=llm_url, model=model)
+        with _detector_lock:
+            if _detector is None:
+                _detector = PIIDetector(llm_url=llm_url, model=model)
     return _detector

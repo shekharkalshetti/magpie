@@ -5,6 +5,7 @@ Loads settings from environment variables.
 """
 
 import os
+import threading
 from typing import Optional
 
 
@@ -46,13 +47,16 @@ class TritonConfig:
 
 # Global config instance
 _config: Optional[TritonConfig] = None
+_config_lock = threading.Lock()
 
 
 def get_config() -> TritonConfig:
     """Get global config instance."""
     global _config
     if _config is None:
-        _config = TritonConfig()
+        with _config_lock:
+            if _config is None:
+                _config = TritonConfig()
     return _config
 
 
@@ -76,10 +80,11 @@ def configure(
         )
     """
     global _config
-    _config = TritonConfig(
-        api_key=api_key,
-        backend_url=backend_url,
-        enabled=enabled,
-        timeout=timeout,
-        fail_open=fail_open,
-    )
+    with _config_lock:
+        _config = TritonConfig(
+            api_key=api_key,
+            backend_url=backend_url,
+            enabled=enabled,
+            timeout=timeout,
+            fail_open=fail_open,
+        )

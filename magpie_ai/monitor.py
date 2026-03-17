@@ -29,6 +29,7 @@ from magpie_ai.schema_guard import (
     SchemaValidationError,
     validate_output_schema,
 )
+from magpie_ai.defaults import VLLM_URL, VLLM_MODEL
 from magpie_ai.pricing import calculate_costs, get_context_utilization
 from magpie_ai.token_extraction import (
     extract_tokens_from_response,
@@ -55,8 +56,8 @@ def _validate_monitor_params(
     trace_id: Optional[str] = None,
     pii: bool = False,
     content_moderation: bool = False,
-    llm_url: str = "http://localhost:1234",
-    llm_model: str = "qwen2.5-1.5b-instruct",
+    llm_url: str = VLLM_URL,
+    llm_model: str = VLLM_MODEL,
     output_schema: Any = None,
     on_schema_fail: str = "block",
 ) -> None:
@@ -148,7 +149,7 @@ def _get_executor() -> ThreadPoolExecutor:
     """Get or create the shared thread pool executor."""
     global _executor
     if _executor is None:
-        _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="magpie_ai_")
+        _executor = ThreadPoolExecutor(max_workers=32, thread_name_prefix="magpie_ai_")
     return _executor
 
 
@@ -183,8 +184,8 @@ def monitor(
     trace_id: Optional[str] = None,
     pii: bool = False,
     content_moderation: bool = False,
-    llm_url: str = "http://localhost:1234",
-    llm_model: str = "qwen2.5-1.5b-instruct",
+    llm_url: str = VLLM_URL,
+    llm_model: str = VLLM_MODEL,
     model: Optional[str] = None,
     input_token_price: Optional[float] = None,
     output_token_price: Optional[float] = None,
@@ -205,8 +206,8 @@ def monitor(
         trace_id: Optional trace ID (generated per execution if not provided)
         pii: Enable PII detection and redaction (default: False)
         content_moderation: Enable content moderation using policy (default: False)
-        llm_url: URL of local LM Studio instance (default: "http://localhost:1234")
-        llm_model: LM Studio model for PII/moderation (default: "qwen2.5-1.5b-instruct")
+        llm_url: URL of LLM instance (default: VLLM_URL env var or "http://localhost:1234")
+        llm_model: Model for PII/moderation (default: VLLM_MODEL env var or "qwen3-1.7b")
         model: Model name for pricing lookup (e.g., "gpt-4", "claude-3-sonnet")
         input_token_price: Explicit input token price per 1M tokens (use if model not in database)
         output_token_price: Explicit output token price per 1M tokens (use if model not in database)
